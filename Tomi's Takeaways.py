@@ -31,17 +31,23 @@ class OrderingSystem:
 
         Label(self.start_frame, text="Welcome to Tomi's Takeaways!", font=("TKDefault", 50, "bold"), wraplength=400).grid(row=0, padx=165, pady=30)
         Button(self.start_frame, text="Food Menu", font=("TKDefault", 50, "bold"), command=self.show_food_menu).grid(row=1, padx=165, pady=30)
+        Button(self.start_frame, text="Exit", font=("TKDefault", 50, "bold"), command=exit).grid(row=2, padx=165, pady=30)
 
         self.food_menu = Frame(parent)
 
         Label(self.food_menu, text="Featured Items", font=("TKDefault", 30, "bold")).grid(row=0, column=1, columnspan=2)
 
         self.cost_label = Label(self.food_menu, text=f"Total cost: ${self.total_cost}", font=("TKDefault", 15, "bold"))
-        self.cost_label.grid(row=16, column=1, columnspan=2, pady=(50, 0))
-        Label(self.food_menu, text="Delivery fees apply ($5). Free delivery for orders over $20!", font=("TKDefault", 11, "italic")).grid(row=17, column=1, columnspan=2)
+        self.cost_label.grid(row=16, column=1, columnspan=2, pady=(30, 0))
+        Label(self.food_menu, text="Delivery fees apply (+$5.00). Free delivery for orders $20 or over!", font=("TKDefault", 11, "italic")).grid(row=17, column=1, columnspan=2)
 
-        Button(self.food_menu, text="Back to start", font=("TKDefault", 30, "bold"), command=self.show_start).grid(row=18, column=1, columnspan=2, pady=(50, 0))
-        Label(self.food_menu, text="This will reset your order!", font=("TKDefault", 11, "italic")).grid(row=19, column=1, columnspan=2)
+        Label(self.food_menu, text="Please enter your name:", font=("TKDefault", 10, "bold")).grid(row=18, column=1, columnspan=2, pady=(30, 0))
+        self.name_entry = Entry(self.food_menu)
+        self.name_entry.grid(row=19, column=1, columnspan=2)
+        Button(self.food_menu, text="Confirm Order", font=("TKDefault", 15, "bold"), command=self.confirm_order).grid(row=20, column=1, columnspan=2)
+
+        Button(self.food_menu, text="Back to start", font=("TKDefault", 30, "bold"), command=self.show_start).grid(row=21, column=1, columnspan=2, pady=(30, 0))
+        Label(self.food_menu, text="This will reset your order!", font=("TKDefault", 11, "italic")).grid(row=22, column=1, columnspan=2)
 
         self.quantity_entries = []
 
@@ -64,7 +70,7 @@ class OrderingSystem:
             Label(self.food_menu, text=item.item_description, font=("TKDefault", 8)).grid(row=start_row + 1, column=col)
             Label(self.food_menu, text=f"${item.item_price:.2f}", font=("TKDefault", 9, "italic")).grid(row=start_row + 2, column=col)
 
-            Label(self.food_menu, text="Quantity you want to order:", font=("TKDefault", 8)).grid(row=start_row + 3, column=col)
+            Label(self.food_menu, text="Order Quantity:", font=("TKDefault", 8)).grid(row=start_row + 3, column=col)
             quantity_entry = Entry(self.food_menu, width=5)
             quantity_entry.insert(0, "1")
             quantity_entry.grid(row=start_row + 4, column=col)
@@ -82,13 +88,35 @@ class OrderingSystem:
         self.quantity_entries[0].focus_set()
         self.current_entry = self.quantity_entries[0]
 
+        self.checkout_frame = Frame(parent)
+
+        Label(self.checkout_frame, text=f"Hi, please finalize your order.", font=("TKDefault", 20, "bold")).grid(row=0, column=1, columnspan=2, padx=180)
+
+        self.order_type = StringVar(value="Takeaway")
+        Label(self.checkout_frame, text="How would you like to receive your food?", font=("TKDefault", 15, "bold")).grid(row=1, column=1, columnspan=2, pady=(30, 0))
+
+        Radiobutton(self.checkout_frame, text="Takeaway (Free)", variable=self.order_type, value="Takeaway", command=self.update_final_total).grid(row=2, column=1, columnspan=2)
+        Radiobutton(self.checkout_frame, text="Delivery (+$5.00 or Free if eligible)", variable=self.order_type, value="Delivery", command=self.update_final_total).grid(row=3, column=1, columnspan=2)
+        
+        self.final_total_label = Label(self.checkout_frame, text="", font=("TKDefault", 15, "bold"))
+        self.final_total_label.grid(row=4, column=1, columnspan=2, pady=20)
+
+        self.subscribe_choice = StringVar(value="No")
+        Label(self.checkout_frame, text="Would you like to subscribe to our mail?", font=("TKDefault", 12, "bold")).grid(row=5, column=1, columnspan=2, pady=(20))
+        self.subscription_dropdown = OptionMenu(self.checkout_frame, self.subscribe_choice, "Yes", "No")
+        self.subscription_dropdown.grid(row=6, column=1, columnspan=2)
+
+        Button(self.checkout_frame, text="Place Final Order", font=("TKDefault", 20, "bold"), command=self.complete_order).grid(row=7, column=1, columnspan=2, pady=20)
+
+
+
     
     def add_to_order(self, item, index):
         self.current_entry = self.quantity_entries[index]
         user_input = self.current_entry.get()
     
         if not user_input.isdigit() or int(user_input) <= 0:
-            messagebox.showerror("Error", "Please only enter positive whole numbers.")
+            messagebox.showwarning("Warning", "Please only enter positive whole numbers.")
             self.current_entry.focus_set()
             self.current_entry.delete(0, END)
             self.current_entry.insert(0, "1")
@@ -119,7 +147,6 @@ class OrderingSystem:
     def delete_last(self):
         if not self.order_history:
             messagebox.showwarning("Warning", "No items to delete!")
-            self.current_entry.focus_set()
             self.current_entry.focus_force()
             return
 
@@ -145,6 +172,11 @@ class OrderingSystem:
     def show_start(self):
         self.order_history = []
 
+        self.order_type.set("Takeaway")
+        self.update_final_total()
+
+        self.subscribe_choice.set("No")
+
         self.receipt.configure(state="normal")
         self.receipt.delete(1.0, END)
         self.receipt.configure(state="disabled")
@@ -152,6 +184,8 @@ class OrderingSystem:
         for entry in self.quantity_entries:
             entry.delete(0, END)
             entry.insert(0, "1")
+        
+        self.name_entry.delete(0, END)
 
         self.total_cost = 0
         self.cost_label.config(text=f"Total cost: ${self.total_cost:.2f}")
@@ -159,6 +193,64 @@ class OrderingSystem:
         self.food_menu.grid_forget()
         self.start_frame.grid()
         root.update_idletasks()
+    
+
+    def update_final_total(self):
+        delivery_fee = 0.00
+    
+        if self.order_type.get() == "Delivery":
+            if self.total_cost < 20:
+                delivery_fee = 5.00
+            else:
+                delivery_fee = 0.00 
+
+        final_amount = self.total_cost + delivery_fee
+    
+        if delivery_fee == 0.00 and self.order_type.get() == "Delivery":
+            msg = f"Final Total: ${final_amount:.2f} (Free Delivery applied!)"
+        elif delivery_fee > 0:
+            msg = f"Final Total: ${final_amount:.2f} (Includes $5 delivery)"
+        else:
+            msg = f"Final Total: ${final_amount:.2f}"
+        
+        self.final_total_label.config(text=msg)
+    
+
+    def confirm_order(self):
+        customer_name = self.name_entry.get().strip()
+
+        if customer_name == "":
+            messagebox.showwarning("Missing Info", "Please enter a name!")
+            self.name_entry.focus_force()
+            return 
+        
+        if not customer_name.replace(" ", "").isalpha():
+            messagebox.showwarning("Invalid Name", "Names can only contain letters!")
+            self.name_entry.delete(0, END)
+            self.name_entry.focus_force()
+            return
+        
+        if self.total_cost == 0:
+            messagebox.showwarning("Empty Order", "Please add items to your order first.")
+            self.quantity_entries[0].focus_force()
+            return
+        
+        self.food_menu.grid_forget()
+        self.checkout_frame.grid()
+        root.update_idletasks()
+
+
+        self.update_final_total()
+
+
+    def complete_order(self):
+        customer_name = self.name_entry.get().strip()
+
+        messagebox.showinfo("Order Placed", f"Thank you, {customer_name}! Your order has been sent to the kitchen.")
+
+        self.checkout_frame.grid_forget()
+        root.update_idletasks()
+        self.show_start()
 
 
 if __name__ == "__main__":
