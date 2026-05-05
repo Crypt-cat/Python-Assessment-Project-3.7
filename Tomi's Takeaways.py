@@ -13,6 +13,7 @@ class MenuItem:
 class OrderingSystem:
     def __init__(self, parent):
         self.total_cost = 0
+        self.order_history = []
 
         self.menu_data = [
             MenuItem("Classic Burger", "100% pure beef patty with onion", 4.50),
@@ -28,15 +29,19 @@ class OrderingSystem:
         self.start_frame = Frame(parent)
         self.start_frame.grid()
 
-        Button(self.start_frame, text="Food Menu", font=("TKDefault", 50, "bold"), command=self.show_food_menu).grid(row=0, padx=165, pady=30, sticky="nesw")
+        Label(self.start_frame, text="Welcome to Tomi's Takeaways!", font=("TKDefault", 50, "bold"), wraplength=400).grid(row=0, padx=165, pady=30)
+        Button(self.start_frame, text="Food Menu", font=("TKDefault", 50, "bold"), command=self.show_food_menu).grid(row=1, padx=165, pady=30)
 
         self.food_menu = Frame(parent)
 
         Label(self.food_menu, text="Featured Items", font=("TKDefault", 30, "bold")).grid(row=0, column=1, columnspan=2)
+
         self.cost_label = Label(self.food_menu, text=f"Total cost: ${self.total_cost}", font=("TKDefault", 15, "bold"))
-        self.cost_label.grid(row=15, column=1, columnspan=2, pady=(50, 0))
-        Button(self.food_menu, text="Back to start", font=("TKDefault", 30, "bold"), command=self.show_start).grid(row=16, column=1, columnspan=2, pady=(50, 0))
-        Label(self.food_menu, text="This will reset your order!", font=("TKDefault", 11, "italic")).grid(row=17, column=1, columnspan=2)
+        self.cost_label.grid(row=16, column=1, columnspan=2, pady=(50, 0))
+        Label(self.food_menu, text="Delivery fees apply ($5). Free delivery for orders over $20!", font=("TKDefault", 11, "italic")).grid(row=17, column=1, columnspan=2)
+
+        Button(self.food_menu, text="Back to start", font=("TKDefault", 30, "bold"), command=self.show_start).grid(row=18, column=1, columnspan=2, pady=(50, 0))
+        Label(self.food_menu, text="This will reset your order!", font=("TKDefault", 11, "italic")).grid(row=19, column=1, columnspan=2)
 
         self.quantity_entries = []
 
@@ -72,40 +77,62 @@ class OrderingSystem:
         Label(self.food_menu, text="Your Order:", font=("TKDefault", 12, "bold")).grid(row=13, column=1, columnspan=2, pady=(20,0))
         self.receipt = ScrolledText(self.food_menu, width=45, height=8, state="disabled")
         self.receipt.grid(row=14, column=1, columnspan=2)
+        Button(self.food_menu, text="Delete latest item", font=("TKDefault", 15, "bold"), command=self.delete_last).grid(row=15, column=1, columnspan=2)
 
         self.quantity_entries[0].focus_set()
+        self.current_entry = self.quantity_entries[0]
 
     
     def add_to_order(self, item, index):
-        current_entry = self.quantity_entries[index]
-        user_input = current_entry.get()
+        self.current_entry = self.quantity_entries[index]
+        user_input = self.current_entry.get()
     
         if not user_input.isdigit() or int(user_input) <= 0:
             messagebox.showerror("Error", "Please only enter positive whole numbers.")
-            current_entry.focus_set()
-            current_entry.delete(0, END)
-            current_entry.insert(0, "1")
-            current_entry.focus_force()
+            self.current_entry.focus_set()
+            self.current_entry.delete(0, END)
+            self.current_entry.insert(0, "1")
+            self.current_entry.focus_force()
             return 
         
         if int(user_input) > 99:
             messagebox.showwarning("Warning", "Please keep quantity at once under 100.")
-            current_entry.focus_set()
-            current_entry.delete(0, END)
-            current_entry.insert(0, "1")
-            current_entry.focus_force()
+            self.current_entry.focus_set()
+            self.current_entry.delete(0, END)
+            self.current_entry.insert(0, "1")
+            self.current_entry.focus_force()
             return
 
         quantity = int(user_input)
         cost = item.item_price * quantity
-    
+
+        self.order_history.append(cost)
         self.total_cost += cost
-        self.cost_label.config(text=f"Total cost: ${self.total_cost}")
+        self.cost_label.config(text=f"Total cost: ${self.total_cost:.2f}")
 
         self.receipt.config(state="normal")
         self.receipt.insert(END, f"{quantity}x {item.item_name}: ${cost:.2f}\n")
         self.receipt.config(state="disabled")
         self.receipt.see(END)
+
+
+    def delete_last(self):
+        if not self.order_history:
+            messagebox.showwarning("Warning", "No items to delete!")
+            self.current_entry.focus_set()
+            self.current_entry.focus_force()
+            return
+
+        last_cost = self.order_history.pop()
+        self.total_cost -= last_cost
+        self.cost_label.config(text=f"Total cost: ${self.total_cost:.2f}")
+
+        self.receipt.config(state="normal")
+        self.receipt.delete("end-2l", "end-1l") 
+        self.receipt.config(state="disabled")
+
+        self.current_entry.delete(0, END)
+        self.current_entry.insert(0, "1")
 
 
     def show_food_menu(self):
@@ -116,7 +143,7 @@ class OrderingSystem:
 
 
     def show_start(self):
-        self.order_list = []
+        self.order_history = []
 
         self.receipt.configure(state="normal")
         self.receipt.delete(1.0, END)
@@ -127,7 +154,7 @@ class OrderingSystem:
             entry.insert(0, "1")
 
         self.total_cost = 0
-        self.cost_label.config(text=f"Total cost: ${self.total_cost}")
+        self.cost_label.config(text=f"Total cost: ${self.total_cost:.2f}")
 
         self.food_menu.grid_forget()
         self.start_frame.grid()
