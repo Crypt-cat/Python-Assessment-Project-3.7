@@ -28,13 +28,15 @@ class OrderingSystem:
         self.start_frame = Frame(parent)
         self.start_frame.grid()
 
-        Button(self.start_frame, text="Food Menu", font=("TKDefault", 30, "bold"), command=self.show_food_menu).grid(row=0, padx=200, pady=150, sticky="nesw")
-        Button(self.start_frame, text="Combo Menu", font=("TKDefault", 30, "bold"), command=self.show_combo_menu).grid(row=1, padx=200, pady=150, sticky="nesw")
+        Button(self.start_frame, text="Food Menu", font=("TKDefault", 50, "bold"), command=self.show_food_menu).grid(row=0, padx=165, pady=30, sticky="nesw")
 
         self.food_menu = Frame(parent)
 
         Label(self.food_menu, text="Featured Items", font=("TKDefault", 30, "bold")).grid(row=0, column=1, columnspan=2)
-        # Button(self.food_menu, text="Back to Main Menu", font=("TKDefault", 30, "bold"), command=self.show_start).grid(columnspan=2)
+        self.cost_label = Label(self.food_menu, text=f"Total cost: ${self.total_cost}", font=("TKDefault", 15, "bold"))
+        self.cost_label.grid(row=15, column=1, columnspan=2, pady=(50, 0))
+        Button(self.food_menu, text="Back to start", font=("TKDefault", 30, "bold"), command=self.show_start).grid(row=16, column=1, columnspan=2, pady=(50, 0))
+        Label(self.food_menu, text="This will reset your order!", font=("TKDefault", 11, "italic")).grid(row=17, column=1, columnspan=2)
 
         self.quantity_entries = []
 
@@ -67,28 +69,42 @@ class OrderingSystem:
 
             current_index += 1
 
-        Label(self.food_menu, text="Your Order:", font=("TKDefault", 12, "bold")).grid(row=25, column=1, columnspan=2, pady=(20,0))
-        self.receipt = ScrolledText(self.food_menu, width=45, height=8, state='disabled')
-        self.receipt.grid(row=26, column=1, columnspan=2)
+        Label(self.food_menu, text="Your Order:", font=("TKDefault", 12, "bold")).grid(row=13, column=1, columnspan=2, pady=(20,0))
+        self.receipt = ScrolledText(self.food_menu, width=45, height=8, state="disabled")
+        self.receipt.grid(row=14, column=1, columnspan=2)
 
-        self.combo_menu = Frame(parent)
+        self.quantity_entries[0].focus_set()
 
     
     def add_to_order(self, item, index):
-        user_input = self.quantity_entries[index].get()
+        current_entry = self.quantity_entries[index]
+        user_input = current_entry.get()
     
         if not user_input.isdigit() or int(user_input) <= 0:
             messagebox.showerror("Error", "Please only enter positive whole numbers.")
+            current_entry.focus_set()
+            current_entry.delete(0, END)
+            current_entry.insert(0, "1")
+            current_entry.focus_force()
             return 
+        
+        if int(user_input) > 99:
+            messagebox.showwarning("Warning", "Please keep quantity at once under 100.")
+            current_entry.focus_set()
+            current_entry.delete(0, END)
+            current_entry.insert(0, "1")
+            current_entry.focus_force()
+            return
 
         quantity = int(user_input)
         cost = item.item_price * quantity
     
-        self.total_cost = self.total_cost =+ cost
+        self.total_cost += cost
+        self.cost_label.config(text=f"Total cost: ${self.total_cost}")
 
-        self.receipt.config(state='normal')
+        self.receipt.config(state="normal")
         self.receipt.insert(END, f"{quantity}x {item.item_name}: ${cost:.2f}\n")
-        self.receipt.config(state='disabled')
+        self.receipt.config(state="disabled")
         self.receipt.see(END)
 
 
@@ -96,15 +112,23 @@ class OrderingSystem:
         self.start_frame.grid_forget()
         self.food_menu.grid()
         root.update_idletasks()
-
-    
-    def show_combo_menu(self):
-        self.start_frame.grid_forget()
-        self.combo_menu.grid()
-        root.update_idletasks()
+        self.quantity_entries[0].focus_set()
 
 
     def show_start(self):
+        self.order_list = []
+
+        self.receipt.configure(state="normal")
+        self.receipt.delete(1.0, END)
+        self.receipt.configure(state="disabled")
+    
+        for entry in self.quantity_entries:
+            entry.delete(0, END)
+            entry.insert(0, "1")
+
+        self.total_cost = 0
+        self.cost_label.config(text=f"Total cost: ${self.total_cost}")
+
         self.food_menu.grid_forget()
         self.start_frame.grid()
         root.update_idletasks()
